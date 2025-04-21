@@ -68,6 +68,10 @@ export default function AddAccountModal({
         return;
       }
 
+      if (!response.data.id) {
+        toast.error("Не валидные данные.");
+      }
+
       const newAccount: Account = {
         id: new Date(Date.now()).toString(),
         login,
@@ -93,6 +97,7 @@ export default function AddAccountModal({
       const res = await axiosInstance.post("/accounts/submit-code", {
         sessionId,
         code: twoFACode,
+        login,
       });
 
       if (res.data.success) {
