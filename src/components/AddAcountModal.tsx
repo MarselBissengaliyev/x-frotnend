@@ -126,7 +126,7 @@ export default function AddAccountModal({
 
         toast.success("Аккаунт добавлен после 2FA!");
         setAccounts((prev) => [...prev, newAccount]);
-        resetFormAndNavigate(newAccount.login);
+        resetFormAndNavigate(newAccount.id);
       }
     } catch {
       toast.error("Ошибка при подтверждении 2FA");
@@ -149,6 +149,13 @@ export default function AddAccountModal({
         challengeInput,
         password,
       });
+
+      if (res.data.twoFactorRequired) {
+        toast.info("Требуется 2FA код");
+        setSessionId(res.data.sessionId);
+        setIs2FA(true);
+        return;
+      }
 
       if (res.data.success) {
         const newAccount: Account = {
@@ -319,7 +326,7 @@ export default function AddAccountModal({
             </div>
           )}
 
-          {isChallenge && (
+          {!is2FA && isChallenge && (
             <div className="border-t pt-4 mt-4">
               <input
                 type="text"
