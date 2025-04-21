@@ -56,7 +56,7 @@ export default function AddAccountModal({
       const response = await axiosInstance.post("/accounts", {
         login,
         password,
-        proxy,
+        proxy: proxy.length > 0 ? proxy : undefined,
         method: method === "Полная генерация" ? 1 : 2,
         userAgent: "default",
       });
