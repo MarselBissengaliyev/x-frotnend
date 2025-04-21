@@ -20,12 +20,13 @@ export default function AddAccountModal({
   const [password, setPassword] = useState("");
   const [proxy, setProxy] = useState("");
   const [method, setMethod] = useState("Полная генерация");
-  const [errors, setErrors] = useState<{ login?: string; password?: string }>(
-    {}
-  );
+  const [errors, setErrors] = useState<{ login?: string; password?: string }>({});
   const [is2FA, setIs2FA] = useState(false);
   const [twoFACode, setTwoFACode] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [isChallenge, setIsChallenge] = useState(false);
+  const [challengeInput, setChallengeInput] = useState("");
+  const [loading, setLoading] = useState(false); // Добавлено состояние для загрузки
 
   const loginRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -37,6 +38,7 @@ export default function AddAccountModal({
     setMethod("Полная генерация");
     setTwoFACode("");
     setIs2FA(false);
+    setIsChallenge(false);
     setSessionId(null);
     setIsModalOpen(false);
     setErrors({});
@@ -52,6 +54,8 @@ export default function AddAccountModal({
       return;
     }
 
+    setLoading(true); // Начинаем загрузку
+
     try {
       const response = await axiosInstance.post("/accounts", {
         login,
@@ -60,6 +64,13 @@ export default function AddAccountModal({
         method: method === "Полная генерация" ? 1 : 2,
         userAgent: "default",
       });
+
+      if (response.data.challengeRequired) {
+        toast.info("Требуется подтвердить действие");
+        setSessionId(response.data.sessionId);
+        setIsChallenge(true);
+        return;
+      }
 
       if (response.data.twoFactorRequired) {
         toast.info("Требуется 2FA код");
@@ -84,6 +95,8 @@ export default function AddAccountModal({
       resetFormAndNavigate(response.data.id);
     } catch {
       toast.error("Ошибка при добавлении аккаунта");
+    } finally {
+      setLoading(false); // Завершаем загрузку
     }
   };
 
@@ -92,6 +105,8 @@ export default function AddAccountModal({
       toast.error("Пожалуйста, введите 2FA код.");
       return;
     }
+
+    setLoading(true);
 
     try {
       const res = await axiosInstance.post("/accounts/submit-code", {
@@ -115,6 +130,43 @@ export default function AddAccountModal({
       }
     } catch {
       toast.error("Ошибка при подтверждении 2FA");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleChallengeSubmit = async () => {
+    if (!challengeInput.trim()) {
+      toast.error("Пожалуйста, введите подтверждение.");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await axiosInstance.post("/accounts/submit-challenge", {
+        sessionId,
+        challengeInput,
+        password,
+      });
+
+      if (res.data.success) {
+        const newAccount: Account = {
+          id: new Date(Date.now()).toString(),
+          login,
+          totalPosts: 0,
+          postsToday: 0,
+          method: method === "Полная генерация" ? 1 : 2,
+        };
+
+        toast.success("Аккаунт добавлен после подтверждения!");
+        setAccounts((prev) => [...prev, newAccount]);
+        resetFormAndNavigate(newAccount.id);
+      }
+    } catch {
+      toast.error("Ошибка при подтверждении действия");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -155,6 +207,7 @@ export default function AddAccountModal({
                   ? "border-red-500 focus:border-red-500"
                   : "focus:ring focus:border-blue-400"
               )}
+              disabled={loading} // Отключаем инпут во время отправки
             />
             {errors.login && (
               <p className="text-red-500 text-sm mt-1">{errors.login}</p>
@@ -176,6 +229,7 @@ export default function AddAccountModal({
                   ? "border-red-500 focus:border-red-500"
                   : "focus:ring focus:border-blue-400"
               )}
+              disabled={loading} // Отключаем инпут во время отправки
             />
             {errors.password && (
               <p className="text-red-500 text-sm mt-1">{errors.password}</p>
@@ -189,6 +243,7 @@ export default function AddAccountModal({
               value={proxy}
               onChange={(e) => setProxy(e.target.value)}
               className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring focus:border-blue-300"
+              disabled={loading} // Отключаем инпут во время отправки
             />
             <p className="text-xs text-gray-400 mt-1">
               💡 Необязательно. Используется для анонимности.
@@ -209,6 +264,7 @@ export default function AddAccountModal({
               value={method}
               onChange={(e) => setMethod(e.target.value)}
               className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring focus:border-blue-300"
+              disabled={loading} // Отключаем инпут во время отправки
             >
               <option value="Полная генерация">Полная генерация</option>
               <option value="Генерация текста + парсинг">
@@ -224,10 +280,20 @@ export default function AddAccountModal({
 
           <button
             onClick={handleSave}
-            className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white py-2.5 rounded-2xl font-medium hover:bg-blue-700 transition-all"
+            className={clsx(
+              "w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl font-medium transition-all",
+              loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 text-white hover:bg-blue-700"
+            )}
+            disabled={loading} // Отключаем кнопку во время отправки
           >
-            <FiSave />
-            Сохранить и перейти
+            {loading ? (
+              <span>Загрузка...</span> // Спиннер или текст "Загрузка..."
+            ) : (
+              <>
+                <FiSave />
+                Сохранить и перейти
+              </>
+            )}
           </button>
 
           {is2FA && (
@@ -238,13 +304,40 @@ export default function AddAccountModal({
                 value={twoFACode}
                 onChange={(e) => setTwoFACode(e.target.value)}
                 className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring focus:border-green-400"
+                disabled={loading}
               />
               <button
                 onClick={handle2FASubmit}
-                className="w-full flex items-center justify-center gap-2 bg-green-600 text-white py-2.5 rounded-2xl mt-3 hover:bg-green-700 transition-all"
+                className={clsx(
+                  "w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl mt-3 transition-all",
+                  loading ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 text-white hover:bg-green-700"
+                )}
+                disabled={loading}
               >
-                <FiSend />
-                Подтвердить 2FA
+                {loading ? <span>Загрузка...</span> : <><FiSend /> Подтвердить 2FA</>}
+              </button>
+            </div>
+          )}
+
+          {isChallenge && (
+            <div className="border-t pt-4 mt-4">
+              <input
+                type="text"
+                placeholder={`Введите email или номер телефона вашего аккаунта, аккаунт заподозрен в частой активности.`}
+                value={challengeInput}
+                onChange={(e) => setChallengeInput(e.target.value)}
+                className="w-full px-4 py-3 border rounded-xl focus:outline-none focus:ring focus:border-yellow-400"
+                disabled={loading}
+              />
+              <button
+                onClick={handleChallengeSubmit}
+                className={clsx(
+                  "w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl mt-3 transition-all",
+                  loading ? "bg-gray-400 cursor-not-allowed" : "bg-yellow-600 text-white hover:bg-yellow-700"
+                )}
+                disabled={loading}
+              >
+                {loading ? <span>Загрузка...</span> : <><FiSend /> Подтвердить подтверждение</>}
               </button>
             </div>
           )}
