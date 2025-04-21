@@ -1,9 +1,7 @@
-import { Link, useLocation } from "react-router-dom";
 import { FaRobot } from "react-icons/fa";
+import { Link } from "react-router-dom";
 
 const Header = () => {
-  const location = useLocation();
-
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 flex items-center justify-between">
       {/* Логотип */}
