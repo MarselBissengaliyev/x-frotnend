@@ -3,6 +3,7 @@ import { FaPlus } from "react-icons/fa";
 import AccountsTable from "../components/AccountsTable";
 import AddAcountModal from "../components/AddAcountModal";
 import axiosInstance from "../axiosConfig";
+import { toast } from "react-toastify";
 
 export type Account = {
   id: string;
@@ -34,6 +35,18 @@ export default function Dashboard() {
     setIsModalOpen(true);
   };
 
+   // Функция удаления аккаунта
+   const handleDelete = async (accountId: string) => {
+    try {
+      await axiosInstance.delete(`/accounts/${accountId}`); // Здесь ты вызываешь API для удаления аккаунта
+      setAccounts((prevAccounts) => prevAccounts.filter((acc) => acc.id !== accountId));
+      toast.success("Аккаунт удален");
+    } catch (error) {
+      toast.error("Ошибка при удалении аккаунта");
+      console.error("Ошибка при удалении аккаунта:", error);
+    }
+  };
+
   return (
     <div className="p-6">
       <h1 className="text-2xl font-bold mb-4 flex items-center gap-2">
@@ -49,7 +62,7 @@ export default function Dashboard() {
         </button>
       </div>
 
-      <AccountsTable accounts={accounts} />
+      <AccountsTable accounts={accounts} onDelete={handleDelete} />
 
       {/* Модалка */}
       {isModalOpen && <AddAcountModal setIsModalOpen={setIsModalOpen} setAccounts={setAccounts} />}

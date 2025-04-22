@@ -1,14 +1,29 @@
 import clsx from "clsx";
 import { useNavigate } from "react-router-dom";
 import { Account } from "../pages/Dashboard";
-import { FaCog } from "react-icons/fa";
+import { FaCog, FaTrashAlt } from "react-icons/fa";
+import { useState } from "react";
 
 type Props = {
   accounts: Account[];
+  onDelete: (accountId: string) => Promise<void>; // Убедитесь, что onDelete возвращает Promise
 };
 
-export default function AccountsTable({ accounts }: Props) {
+export default function AccountsTable({ accounts, onDelete }: Props) {
   const navigate = useNavigate();
+  const [deletingAccountId, setDeletingAccountId] = useState<string | null>(null);
+
+  const handleDelete = async (accountId: string) => {
+    if (!window.confirm("Вы уверены, что хотите удалить этот аккаунт?")) return; // Подтверждение удаления
+    setDeletingAccountId(accountId);
+    try {
+      await onDelete(accountId);
+    } catch (error) {
+      console.error("Failed to delete account", error);
+    } finally {
+      setDeletingAccountId(null);
+    }
+  };
 
   return (
     <div className="overflow-x-auto rounded-xl shadow-md border border-gray-200">
@@ -57,6 +72,14 @@ export default function AccountsTable({ accounts }: Props) {
                 >
                   <FaCog className="text-sm" />
                   Настроить
+                </button>
+                <button
+                  onClick={() => handleDelete(acc.id)}
+                  disabled={deletingAccountId === acc.id}
+                  className="flex items-center gap-2 ml-4 text-red-600 hover:text-red-800 hover:underline transition-colors duration-150"
+                >
+                  <FaTrashAlt className="text-sm" />
+                  {deletingAccountId === acc.id ? "Удаление..." : "Удалить"}
                 </button>
               </td>
             </tr>
