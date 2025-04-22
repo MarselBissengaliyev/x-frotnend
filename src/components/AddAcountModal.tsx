@@ -20,7 +20,9 @@ export default function AddAccountModal({
   const [password, setPassword] = useState("");
   const [proxy, setProxy] = useState("");
   const [method, setMethod] = useState("Полная генерация");
-  const [errors, setErrors] = useState<{ login?: string; password?: string }>({});
+  const [errors, setErrors] = useState<{ login?: string; password?: string }>(
+    {}
+  );
   const [is2FA, setIs2FA] = useState(false);
   const [twoFACode, setTwoFACode] = useState("");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -80,7 +82,9 @@ export default function AddAccountModal({
       }
 
       if (!response.data.id) {
-        toast.error("Не валидные данные.");
+        toast.error(
+          "Не удалось получить ID аккаунта. Проверьте данные и попробуйте снова."
+        );
       }
 
       const newAccount: Account = {
@@ -93,6 +97,7 @@ export default function AddAccountModal({
 
       setAccounts((prev) => [...prev, newAccount]);
       resetFormAndNavigate(response.data.id);
+      toast.success("Аккаунт успешно добавлен!");
     } catch {
       toast.error("Ошибка при добавлении аккаунта");
     } finally {
@@ -115,6 +120,11 @@ export default function AddAccountModal({
         login,
       });
 
+      if (!res.data.success) {
+        toast.error("Неверный код 2FA. Попробуйте ещё раз.");
+        return;
+      }
+
       if (res.data.success) {
         const newAccount: Account = {
           id: new Date(Date.now()).toString(),
@@ -126,7 +136,7 @@ export default function AddAccountModal({
 
         toast.success("Аккаунт добавлен после 2FA!");
         setAccounts((prev) => [...prev, newAccount]);
-        resetFormAndNavigate(newAccount.id);
+        resetFormAndNavigate(res.data.id);
       }
     } catch {
       toast.error("Ошибка при подтверждении 2FA");
@@ -168,7 +178,12 @@ export default function AddAccountModal({
 
         toast.success("Аккаунт добавлен после подтверждения!");
         setAccounts((prev) => [...prev, newAccount]);
-        resetFormAndNavigate(newAccount.id);
+        resetFormAndNavigate(res.data.id);
+      }
+
+      if (!res.data.success) {
+        toast.error("Ошибка подтверждения. Проверьте введённые данные.");
+        return;
       }
     } catch {
       toast.error("Ошибка при подтверждении действия");
@@ -289,12 +304,14 @@ export default function AddAccountModal({
             onClick={handleSave}
             className={clsx(
               "w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl font-medium transition-all",
-              loading ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 text-white hover:bg-blue-700"
+              loading || is2FA || (!is2FA && isChallenge)
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-600 text-white hover:bg-blue-700"
             )}
-            disabled={loading} // Отключаем кнопку во время отправки
+            disabled={loading || is2FA || (!is2FA && isChallenge)}
           >
             {loading ? (
-              <span>Загрузка...</span> // Спиннер или текст "Загрузка..."
+              <span>Загрузка...</span>
             ) : (
               <>
                 <FiSave />
@@ -317,11 +334,19 @@ export default function AddAccountModal({
                 onClick={handle2FASubmit}
                 className={clsx(
                   "w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl mt-3 transition-all",
-                  loading ? "bg-gray-400 cursor-not-allowed" : "bg-green-600 text-white hover:bg-green-700"
+                  loading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-green-600 text-white hover:bg-green-700"
                 )}
                 disabled={loading}
               >
-                {loading ? <span>Загрузка...</span> : <><FiSend /> Подтвердить 2FA</>}
+                {loading ? (
+                  <span>Загрузка...</span>
+                ) : (
+                  <>
+                    <FiSend /> Подтвердить 2FA
+                  </>
+                )}
               </button>
             </div>
           )}
@@ -340,11 +365,19 @@ export default function AddAccountModal({
                 onClick={handleChallengeSubmit}
                 className={clsx(
                   "w-full flex items-center justify-center gap-2 py-2.5 rounded-2xl mt-3 transition-all",
-                  loading ? "bg-gray-400 cursor-not-allowed" : "bg-yellow-600 text-white hover:bg-yellow-700"
+                  loading
+                    ? "bg-gray-400 cursor-not-allowed"
+                    : "bg-yellow-600 text-white hover:bg-yellow-700"
                 )}
                 disabled={loading}
               >
-                {loading ? <span>Загрузка...</span> : <><FiSend /> Подтвердить подтверждение</>}
+                {loading ? (
+                  <span>Загрузка...</span>
+                ) : (
+                  <>
+                    <FiSend /> Подтвердить подтверждение
+                  </>
+                )}
               </button>
             </div>
           )}
