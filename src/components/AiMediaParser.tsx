@@ -106,16 +106,17 @@ export default function AiMediaParser() {
     };
 
     try {
+      let result: any;
       if (isAutoPost) {
-        await axiosInstance.post("/schedule/schedule-post", {
+        result = await axiosInstance.post("/schedule/schedule-post", {
           accountId,
           cronExpression,
         });
       } else {
-        await axiosInstance.post("/puppeteer/submit-post", payload);
+        result = await axiosInstance.post("/puppeteer/submit-post", payload);
       }
 
-      toast.success("Пост успешно создан и запланирован!");
+      toast.success(`Пост успешно создан и запланирован! Ссылка: ${result.url}`);
     } catch (err: any) {
       console.error(err);
       const errorMsg = err.response?.data?.message;

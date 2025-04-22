@@ -139,16 +139,26 @@ export default function FullAiGeneration({}: Props) {
     };
 
     try {
+      let result;
       if (isAutoPost) {
-        await axiosInstance.post("/schedule/schedule-post", {
+        result = await axiosInstance.post("/schedule/schedule-post", {
           accountId,
           cronExpression,
         });
       } else {
-        await axiosInstance.post("/puppeteer/submit-post", payload);
+        result = await axiosInstance.post("/puppeteer/submit-post", payload);
+        console.log(result)
       }
 
-      toast.success("Пост успешно создан и запланирован!");
+      toast.success(
+        <span>
+          Пост успешно создан и запланирован! Ссылка:{' '}
+          <a href={result.data.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-500">
+            {result.data.url}
+          </a>
+        </span>
+      );
+      
     } catch (err: any) {
       console.error(err);
 
