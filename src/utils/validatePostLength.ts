@@ -1,16 +1,13 @@
 export function validatePostLength({
   content,
   hashtags,
-  targetUrl,
 }: {
   content: string;
   hashtags?: string;
-  targetUrl?: string;
 }): { isValid: boolean; totalLength: number; error?: string } {
   const pieces = [
     content?.trim(),
     hashtags?.trim(),
-    targetUrl ? `Check it out: ${targetUrl}` : null,
   ].filter(Boolean);
 
   const finalText = pieces.join("\n");

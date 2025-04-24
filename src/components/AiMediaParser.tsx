@@ -36,7 +36,6 @@ export default function AiMediaParser() {
   const postValidation = validatePostLength({
     content: generatedText,
     hashtags: generatedHashtags,
-    targetUrl,
   });
 
   const [loadingState, setLoadingState] = useState({

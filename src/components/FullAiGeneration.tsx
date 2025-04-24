@@ -38,7 +38,6 @@ export default function FullAiGeneration({}: Props) {
   const postValidation = validatePostLength({
     content: generatedText,
     hashtags: generatedHashtags,
-    targetUrl,
   });
 
   const [loadingState, setLoadingState] = useState<{

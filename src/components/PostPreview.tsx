@@ -19,7 +19,6 @@ export default function PostPreview({
   const validation = validatePostLength({
     content: text,
     hashtags,
-    targetUrl,
   });
 
   return (
