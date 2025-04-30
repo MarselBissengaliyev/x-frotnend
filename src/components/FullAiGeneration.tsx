@@ -4,9 +4,8 @@ import {
   FaClock,
   FaHashtag,
   FaImage,
-  FaInfoCircle,
   FaLink,
-  FaSpinner,
+  FaSpinner
 } from "react-icons/fa";
 import { useParams } from "react-router-dom";
 import { toast } from "react-toastify";
