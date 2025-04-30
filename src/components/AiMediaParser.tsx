@@ -115,18 +115,22 @@ export default function AiMediaParser() {
           "/schedule/schedule-post",
           buildPostData()
         );
+        toast.success(
+          <span>
+            Пост успешно создан и запланирован! 
+          </span>
+        );
       } else {
         result = await axiosInstance.post("/puppeteer/submit-post", payload);
+        toast.success(
+          <span>
+            Пост успешно создан и запланирован! Ссылка:{' '}
+            <a href={result.data.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-500">
+              {result.data.url}
+            </a>
+          </span>
+        );
       }
-
-      toast.success(
-        <span>
-          Пост успешно создан и запланирован! Ссылка:{' '}
-          <a href={result.data.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-500">
-            {result.data.url}
-          </a>
-        </span>
-      );
     } catch (err: any) {
       console.error(err);
       if (err.response?.data?.message) {
