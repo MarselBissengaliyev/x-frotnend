@@ -40,7 +40,7 @@ export default function AiMediaParser() {
   const [loadingState, setLoadingState] = useState({
     text: false,
     hashtags: false,
-    image: false,
+    image_analysis: false
   });
 
   const [loading, setLoading] = useState(false);
@@ -213,7 +213,7 @@ export default function AiMediaParser() {
             value={imageSource}
             onChange={(e) => setImageSource(e.target.value)}
             onGenerate={() => handleGenerateClick("image_analysis")}
-            disabled={loadingState.image}
+            disabled={loadingState.image_analysis}
             generatedContent={generatedImage}
             type="image"
             placeholder="Введите источник изображений"
