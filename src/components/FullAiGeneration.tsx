@@ -74,7 +74,6 @@ export default function FullAiGeneration({}: Props) {
     promptText: cleanValue(promptText),
     promptImage: cleanValue(promptImage),
     promptHashtags: cleanValue(promptHashtags),
-    imageSource: "",
     targetUrl: cleanValue(targetUrl),
     cronExpression: cleanValue(cronExpression),
     promotedOnly: isPromoted,
@@ -109,12 +108,11 @@ export default function FullAiGeneration({}: Props) {
     setLoadingState((prev) => ({ ...prev, [type]: true }));
 
     try {
-      const res = await axiosInstance.post("/content-settings/generate", {
+      const res = await axiosInstance.post("/content-generation/generate", {
         type,
         prompt,
       });
 
-      await axiosInstance.post("/content-settings", buildPostData());
       toast.success(`${type} сгенерирован успешно!`);
       setGeneratedMap[type](res.data?.result || "");
     } catch (err) {
@@ -140,24 +138,20 @@ export default function FullAiGeneration({}: Props) {
     try {
       let result;
       if (isAutoPost) {
-        result = await axiosInstance.post("/schedule/schedule-post", {
-          accountId,
-          cronExpression,
-        });
+        result = await axiosInstance.post(
+          "/schedule/schedule-post",
+          buildPostData()
+        );
       } else {
         result = await axiosInstance.post("/puppeteer/submit-post", payload);
-        console.log(result)
+        console.log(result);
       }
 
       toast.success(
         <span>
-          Пост успешно создан и запланирован! Ссылка:{' '}
-          <a href={result.data.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-500">
-            {result.data.url}
-          </a>
+          Пост успешно создан и запланирован! 
         </span>
       );
-      
     } catch (err: any) {
       console.error(err);
 
@@ -214,42 +208,40 @@ export default function FullAiGeneration({}: Props) {
         </div>
 
         {/* Включаем/выключаем режим генерации контента */}
-        {!isAutoPost && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <PromptInputBlock
-              label="Prompt для изображения"
-              icon={<FaImage />}
-              value={promptImage}
-              onChange={(e) => setPromptImage(e.target.value)}
-              onGenerate={() => handleGenerateClick("image")}
-              disabled={loadingState.image}
-              generatedContent={generatedImage}
-              type="image"
-            />
-            <PromptInputBlock
-              label="Prompt для хештегов"
-              icon={<FaHashtag />}
-              value={promptHashtags}
-              onChange={(e) => setPromptHashtags(e.target.value)}
-              onGenerate={() => handleGenerateClick("hashtags")}
-              disabled={loadingState.hashtags}
-              generatedContent={generatedHashtags}
-              type="hashtags"
-            />
-          </div>
-        )}
-        {!isAutoPost && (
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <PromptInputBlock
-            label="Prompt для текста"
-            icon={<FaHashtag />}
-            value={promptText}
-            onChange={(e) => setPromptText(e.target.value)}
-            onGenerate={() => handleGenerateClick("text")}
-            disabled={loadingState.text || isAutoPost}
-            generatedContent={generatedText}
-            type="text"
+            label="Prompt для изображения"
+            icon={<FaImage />}
+            value={promptImage}
+            onChange={(e) => setPromptImage(e.target.value)}
+            onGenerate={() => handleGenerateClick("image")}
+            disabled={loadingState.image}
+            generatedContent={generatedImage}
+            type="image"
           />
-        )}
+          <PromptInputBlock
+            label="Prompt для хештегов"
+            icon={<FaHashtag />}
+            value={promptHashtags}
+            onChange={(e) => setPromptHashtags(e.target.value)}
+            onGenerate={() => handleGenerateClick("hashtags")}
+            disabled={loadingState.hashtags}
+            generatedContent={generatedHashtags}
+            type="hashtags"
+          />
+        </div>
+
+        <PromptInputBlock
+          label="Prompt для текста"
+          icon={<FaHashtag />}
+          value={promptText}
+          onChange={(e) => setPromptText(e.target.value)}
+          onGenerate={() => handleGenerateClick("text")}
+          disabled={loadingState.text}
+          generatedContent={generatedText}
+          type="text"
+        />
       </fieldset>
 
       {/* Секция параметров публикации */}
@@ -257,16 +249,6 @@ export default function FullAiGeneration({}: Props) {
         <legend className="text-lg font-semibold text-gray-700 mb-2">
           ⚙️ Настройки публикации
         </legend>
-
-        {isAutoPost && (
-          <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg shadow-sm">
-            <FaInfoCircle className="text-blue-500 mt-1" />
-            <p className="text-sm text-blue-700">
-              Контент будет автоматически генерироваться на основе последнего
-              вручную созданного поста.
-            </p>
-          </div>
-        )}
 
         <TextInputBlock
           label="Target URL"

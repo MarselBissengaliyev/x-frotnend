@@ -4,7 +4,6 @@ import {
   FaClock,
   FaHashtag,
   FaImage,
-  FaInfoCircle,
   FaLink,
   FaSpinner,
 } from "react-icons/fa";
@@ -41,7 +40,7 @@ export default function AiMediaParser() {
   const [loadingState, setLoadingState] = useState({
     text: false,
     hashtags: false,
-    image: false
+    image: false,
   });
 
   const [loading, setLoading] = useState(false);
@@ -49,13 +48,13 @@ export default function AiMediaParser() {
   const promptsMap = {
     text: promptText,
     hashtags: promptHashtags,
-    image: imageSource
+    image_analysis: imageSource 
   };
 
   const setGeneratedMap = {
     text: setGeneratedText,
     hashtags: setGeneratedHashtags,
-    image: setGeneratedImage
+    image_analysis: setGeneratedImage,
   };
 
   const cleanValue = (value: string) => (value.trim() === "" ? null : value);
@@ -65,27 +64,32 @@ export default function AiMediaParser() {
     promptText: cleanValue(promptText),
     promptImage: cleanValue(imageSource),
     promptHashtags: cleanValue(promptHashtags),
-    imageSource: "",
     targetUrl: cleanValue(targetUrl),
     cronExpression: cleanValue(cronExpression),
     promotedOnly: isPromoted,
   });
 
-  const handleGenerateClick = async (type: "text" | "hashtags" | "image") => {
+  const handleGenerateClick = async (type: "text" | "hashtags" | "image_analysis") => {
     const prompt = promptsMap[type];
     setLoadingState((prev) => ({ ...prev, [type]: true }));
 
+    const data = type === "image_analysis" ? {type,prompt, imageUrl: imageSource} : { type, prompt }
     try {
-      const res = await axiosInstance.post("/content-settings/generate", {
-        type,
-        prompt,
-      });
-
-      await axiosInstance.post("/content-settings", buildPostData());
+      const res = await axiosInstance.post("/content-generation/generate", data);
       toast.success(`${type} сгенерирован успешно!`);
       setGeneratedMap[type](res.data?.result || "");
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      if (err.response?.data?.message) {
+        const errorMessages = err.response.data.message;
+        if (Array.isArray(errorMessages)) {
+          errorMessages.forEach((msg: string) => toast.error(msg));
+        } else {
+          toast.error(errorMessages);
+        }
+      } else {
+        toast.error("Ошибка при создании поста.");
+      }
       toast.error(`Ошибка при генерации ${type}`);
     } finally {
       setLoadingState((prev) => ({ ...prev, [type]: false }));
@@ -107,22 +111,33 @@ export default function AiMediaParser() {
     try {
       let result: any;
       if (isAutoPost) {
-        result = await axiosInstance.post("/schedule/schedule-post", {
-          accountId,
-          cronExpression,
-        });
+        result = await axiosInstance.post(
+          "/schedule/schedule-post",
+          buildPostData()
+        );
       } else {
         result = await axiosInstance.post("/puppeteer/submit-post", payload);
       }
 
-      toast.success(`Пост успешно создан и запланирован! Ссылка: ${result.url}`);
+      toast.success(
+        <span>
+          Пост успешно создан и запланирован! Ссылка:{' '}
+          <a href={result.data.url} target="_blank" rel="noopener noreferrer" className="underline text-blue-500">
+            {result.data.url}
+          </a>
+        </span>
+      );
     } catch (err: any) {
       console.error(err);
-      const errorMsg = err.response?.data?.message;
-      if (Array.isArray(errorMsg)) {
-        errorMsg.forEach((msg: string) => toast.error(msg));
+      if (err.response?.data?.message) {
+        const errorMessages = err.response.data.message;
+        if (Array.isArray(errorMessages)) {
+          errorMessages.forEach((msg: string) => toast.error(msg));
+        } else {
+          toast.error(errorMessages);
+        }
       } else {
-        toast.error(errorMsg || "Ошибка при создании поста.");
+        toast.error("Ошибка при создании поста.");
       }
     } finally {
       setLoading(false);
@@ -169,60 +184,49 @@ export default function AiMediaParser() {
             🖊 Ручной режим
           </button>
         </div>
-
-        {isAutoPost && (
-          <div className="flex items-start space-x-3 p-4 bg-blue-50 border border-blue-200 rounded-lg shadow-sm">
-            <FaInfoCircle className="text-blue-500 mt-1" />
-            <p className="text-sm text-blue-700">
-              Контент будет автоматически генерироваться на основе последнего
-              вручную созданного поста.
-            </p>
-          </div>
-        )}
       </section>
 
       {/* Секция промптов (только в ручном режиме) */}
-      {!isAutoPost && (
-        <section className="space-y-4">
-          <h3 className="text-lg font-semibold text-gray-700">
-            🧩 Источники и промпты
-          </h3>
+
+      <section className="space-y-4">
+        <h3 className="text-lg font-semibold text-gray-700">
+          🧩 Источники и промпты
+        </h3>
+        <PromptInputBlock
+          label="Prompt для текста"
+          icon={<FaHashtag />}
+          value={promptText}
+          onChange={(e) => setPromptText(e.target.value)}
+          onGenerate={() => handleGenerateClick("text")}
+          generatedContent={generatedText}
+          type="text"
+          disabled={loadingState.text}
+        />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <PromptInputBlock
-              label="Prompt для текста"
-              icon={<FaHashtag />}
-              value={promptText}
-              onChange={(e) => setPromptText(e.target.value)}
-              onGenerate={() => handleGenerateClick("text")}
-              generatedContent={generatedText}
-              type="text"
-              disabled={loadingState.text}
-            />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <PromptInputBlock
-              label="Источник изображений"
-              icon={<FaImage />}
-              value={imageSource}
-              onChange={(e) => setImageSource(e.target.value)}
-              onGenerate={() => handleGenerateClick("image")}
-              disabled={loadingState.image}
-              generatedContent={generatedImage}
-              type="image"
-              placeholder="Введите источник изображений"
-              btnText="Обработать изображение AI"
-            />
-            <PromptInputBlock
-              label="Prompt для хештегов"
-              icon={<FaHashtag />}
-              value={promptHashtags}
-              onChange={(e) => setPromptHashtags(e.target.value)}
-              onGenerate={() => handleGenerateClick("hashtags")}
-              generatedContent={generatedHashtags}
-              type="hashtags"
-              disabled={loadingState.hashtags}
-            />
-          </div>
-        </section>
-      )}
+            label="Источник изображений"
+            icon={<FaImage />}
+            value={imageSource}
+            onChange={(e) => setImageSource(e.target.value)}
+            onGenerate={() => handleGenerateClick("image_analysis")}
+            disabled={loadingState.image}
+            generatedContent={generatedImage}
+            type="image"
+            placeholder="Введите источник изображений"
+            btnText="Обработать изображение AI"
+          />
+          <PromptInputBlock
+            label="Prompt для хештегов"
+            icon={<FaHashtag />}
+            value={promptHashtags}
+            onChange={(e) => setPromptHashtags(e.target.value)}
+            onGenerate={() => handleGenerateClick("hashtags")}
+            generatedContent={generatedHashtags}
+            type="hashtags"
+            disabled={loadingState.hashtags}
+          />
+        </div>
+      </section>
 
       <hr className="border-gray-200" />
 
