@@ -85,6 +85,7 @@ export default function AddAccountModal({
         toast.error(
           "Не удалось получить ID аккаунта. Проверьте данные и попробуйте снова."
         );
+        return;
       }
 
       const newAccount: Account = {
